@@ -61,7 +61,7 @@
     }
 
     #clock-row.pulse {
-      transform: scale(0.97);
+      /* pulse handled via JS to compose with fitScale */
     }
 
     /* MM:SS portion */
@@ -81,6 +81,16 @@
       letter-spacing: 0.04em;
       line-height: 1;
       transition: color 0.2s ease;
+    }
+
+    /* Mobile: keep one line, JS handles scaling */
+    @media (max-width: 600px) {
+      #time-display {
+        font-size: 28vw;
+      }
+      #ms-display {
+        font-size: 14vw;
+      }
     }
 
     /* Status hint */
@@ -331,9 +341,10 @@
         statusEl.textContent = 'Stopped — tap to resume';
       }
 
-      // Pulse animation
-      document.getElementById('clock-row').classList.add('pulse');
-      setTimeout(() => document.getElementById('clock-row').classList.remove('pulse'), 120);
+      // Pulse animation — compose with current fitScale
+      const row = document.getElementById('clock-row');
+      row.style.transform = `scale(${fitScale * 0.97})`;
+      setTimeout(() => { row.style.transform = `scale(${fitScale})`; }, 120);
     }
 
     function resetTimer(e) {
@@ -377,10 +388,35 @@
 
     body.addEventListener('click', toggleTimer);
 
+    // ── Auto-fit: scale UP or DOWN so the clock fills the screen ──
+    let fitScale = 1;
+
+    function fitClock() {
+      const row = document.getElementById('clock-row');
+      row.style.transform = ''; // reset to measure natural size
+
+      const isRotated = document.body.classList.contains('rotated');
+      // In rotated mode the body is spun 90°, so visible width = innerHeight
+      const availW = (isRotated ? window.innerHeight : window.innerWidth) * 0.92;
+      const availH = (isRotated ? window.innerWidth  : window.innerHeight) * 0.55;
+
+      const rowW = row.scrollWidth;
+      const rowH = row.scrollHeight;
+
+      // Scale to fill width, but never exceed 55 % of height
+      fitScale = Math.min(availW / rowW, availH / rowH);
+      row.style.transform = `scale(${fitScale})`;
+    }
+
+    window.addEventListener('resize', fitClock);
+    window.addEventListener('load', fitClock);
+    document.fonts.ready.then(fitClock);
+
     // Rotate toggle
     function toggleRotate(e) {
       e.stopPropagation();
       document.body.classList.toggle('rotated');
+      setTimeout(fitClock, 50);
     }
 
     // Keyboard: Space = toggle, R = reset, L = lap
