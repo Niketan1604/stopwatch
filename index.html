@@ -322,6 +322,51 @@
       animFrame = requestAnimationFrame(update);
     }
 
+    // ── Web Audio sounds (no files needed) ──
+    let audioCtx = null;
+
+    function getAudioCtx() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      // Resume if browser suspended it
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function beep(freq, duration, when) {
+      const ctx = getAudioCtx();
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = 'square';
+      osc.frequency.value = freq;
+
+      // Hard attack, quick exponential decay — classic digital beep shape
+      gain.gain.setValueAtTime(0, when);
+      gain.gain.linearRampToValueAtTime(0.18, when + 0.004);
+      gain.gain.setValueAtTime(0.18, when + duration - 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, when + duration);
+
+      osc.start(when);
+      osc.stop(when + duration + 0.01);
+    }
+
+    function playStartSound() {
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+      // Classic double-beep: two identical sharp 880 Hz pips, 90 ms each
+      beep(880, 0.09, now);
+      beep(880, 0.09, now + 0.13);
+    }
+
+    function playStopSound() {
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+      // Single lower beep at 660 Hz, slightly longer — "done"
+      beep(660, 0.15, now);
+    }
+
     function toggleTimer(e) {
       // Don't toggle if clicking a button
       if (e.target.classList.contains('ctrl-btn')) return;
@@ -329,12 +374,14 @@
       createRipple(e);
 
       if (!running) {
+        playStartSound();
         startTime = Date.now() - elapsed;
         running = true;
         body.classList.add('running');
         statusEl.textContent = 'Running — tap to stop';
         animFrame = requestAnimationFrame(update);
       } else {
+        playStopSound();
         cancelAnimationFrame(animFrame);
         running = false;
         body.classList.remove('running');
