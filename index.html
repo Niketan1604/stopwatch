@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="screen-orientation" content="portrait" />
   <title>Stopwatch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -198,11 +199,68 @@
     body.running #hint {
       opacity: 0;
     }
+
+    /* ── Portrait rotation override ── */
+    body.rotated {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vh;
+      height: 100vw;
+      transform: rotate(90deg) translateY(-100%);
+      transform-origin: top left;
+      overflow: hidden;
+    }
+
+    /* Rotate button */
+    #rotate-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid #e0e0e0;
+      background: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s, background 0.2s;
+      z-index: 999;
+    }
+
+    #rotate-btn:hover {
+      border-color: #aaa;
+      background: #f5f5f5;
+    }
+
+    #rotate-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: #ccc;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: stroke 0.2s, transform 0.4s;
+    }
+
+    #rotate-btn:hover svg { stroke: #555; }
+    body.rotated #rotate-btn svg { transform: rotate(90deg); stroke: #555; }
   </style>
 </head>
 <body id="body">
 
   <div id="run-dot"></div>
+
+  <!-- Rotate toggle -->
+  <button id="rotate-btn" onclick="toggleRotate(event)" title="Toggle portrait / landscape">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 12a8 8 0 0 1 8-8" />
+      <polyline points="12 2 12 6 8 4" />
+      <rect x="7" y="9" width="10" height="13" rx="1" />
+    </svg>
+  </button>
   <div id="hint">Tap anywhere to start</div>
 
   <div id="clock-row">
@@ -318,6 +376,12 @@
     }
 
     body.addEventListener('click', toggleTimer);
+
+    // Rotate toggle
+    function toggleRotate(e) {
+      e.stopPropagation();
+      document.body.classList.toggle('rotated');
+    }
 
     // Keyboard: Space = toggle, R = reset, L = lap
     document.addEventListener('keydown', (e) => {
