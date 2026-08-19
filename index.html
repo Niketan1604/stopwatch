@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stopwatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.15s ease;
+      overflow: hidden;
+    }
+
+    /* Ripple effect */
+    .ripple {
+      position: fixed;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.06);
+      transform: scale(0);
+      animation: ripple-anim 0.55s linear;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    @keyframes ripple-anim {
+      to {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+
+    /* Main time display wrapper */
+    #clock-row {
+      display: flex;
+      flex-direction: row;
+      align-items: baseline;
+      justify-content: center;
+      transition: transform 0.1s ease;
+    }
+
+    #clock-row.pulse {
+      transform: scale(0.97);
+    }
+
+    /* MM:SS portion */
+    #time-display {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(120px, 22vw, 280px);
+      color: #111111;
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+
+    /* Milliseconds inline */
+    #ms-display {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(60px, 11vw, 160px);
+      color: #111111;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      transition: color 0.2s ease;
+    }
+
+    /* Status hint */
+    #status {
+      font-family: 'Inter', sans-serif;
+      font-weight: 300;
+      font-size: clamp(13px, 1.6vw, 18px);
+      color: #cccccc;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      margin-top: 36px;
+      transition: color 0.3s ease, opacity 0.3s ease;
+    }
+
+    /* Lap list */
+    #lap-container {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      gap: 6px;
+      max-height: 160px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .lap-item {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      color: #999;
+      letter-spacing: 0.1em;
+      opacity: 0;
+      animation: lap-fade-in 0.3s forwards;
+    }
+
+    @keyframes lap-fade-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Corner controls */
+    #corner-controls {
+      position: fixed;
+      bottom: 24px;
+      right: 28px;
+      display: flex;
+      flex-direction: row;
+      gap: 12px;
+    }
+
+    .ctrl-btn {
+      font-family: 'Inter', sans-serif;
+      font-weight: 400;
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #cccccc;
+      background: none;
+      border: 1px solid #e0e0e0;
+      padding: 8px 16px;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+
+    .ctrl-btn:hover {
+      color: #555;
+      border-color: #aaa;
+      background: #f5f5f5;
+    }
+
+    /* Running indicator dot */
+    #run-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #22c55e;
+      position: fixed;
+      top: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    body.running #run-dot {
+      opacity: 1;
+      animation: dot-blink 1.2s ease-in-out infinite;
+    }
+
+    @keyframes dot-blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    /* Hint text top */
+    #hint {
+      position: fixed;
+      top: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 300;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #dddddd;
+      transition: opacity 0.4s;
+      white-space: nowrap;
+    }
+
+    body.running #hint {
+      opacity: 0;
+    }
+  </style>
+</head>
+<body id="body">
+
+  <div id="run-dot"></div>
+  <div id="hint">Tap anywhere to start</div>
+
+  <div id="clock-row">
+    <div id="time-display">00:00</div>
+    <div id="ms-display">.00</div>
+  </div>
+  <div id="status">Ready</div>
+
+  <div id="lap-container"></div>
+
+  <div id="corner-controls">
+    <button class="ctrl-btn" id="lap-btn" onclick="recordLap(event)">Lap</button>
+    <button class="ctrl-btn" id="reset-btn" onclick="resetTimer(event)">Reset</button>
+  </div>
+
+  <script>
+    let startTime = 0;
+    let elapsed = 0;
+    let running = false;
+    let animFrame = null;
+    let lapCount = 0;
+
+    const body = document.getElementById('body');
+    const timeDisplay = document.getElementById('time-display');
+    const msDisplay = document.getElementById('ms-display');
+    const statusEl = document.getElementById('status');
+    const lapContainer = document.getElementById('lap-container');
+
+    function pad(n, digits = 2) {
+      return String(Math.floor(n)).padStart(digits, '0');
+    }
+
+    function formatTime(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      const centiseconds = Math.floor((ms % 1000) / 10);
+      return {
+        main: `${pad(minutes)}:${pad(seconds)}`,
+        ms: `.${pad(centiseconds)}`
+      };
+    }
+
+    function update() {
+      elapsed = Date.now() - startTime;
+      const { main, ms } = formatTime(elapsed);
+      timeDisplay.textContent = main;
+      msDisplay.textContent = ms;
+      animFrame = requestAnimationFrame(update);
+    }
+
+    function toggleTimer(e) {
+      // Don't toggle if clicking a button
+      if (e.target.classList.contains('ctrl-btn')) return;
+
+      createRipple(e);
+
+      if (!running) {
+        startTime = Date.now() - elapsed;
+        running = true;
+        body.classList.add('running');
+        statusEl.textContent = 'Running — tap to stop';
+        animFrame = requestAnimationFrame(update);
+      } else {
+        cancelAnimationFrame(animFrame);
+        running = false;
+        body.classList.remove('running');
+        statusEl.textContent = 'Stopped — tap to resume';
+      }
+
+      // Pulse animation
+      document.getElementById('clock-row').classList.add('pulse');
+      setTimeout(() => document.getElementById('clock-row').classList.remove('pulse'), 120);
+    }
+
+    function resetTimer(e) {
+      e.stopPropagation();
+      cancelAnimationFrame(animFrame);
+      running = false;
+      elapsed = 0;
+      lapCount = 0;
+      body.classList.remove('running');
+      timeDisplay.textContent = '00:00';
+      msDisplay.textContent = '.00';
+      statusEl.textContent = 'Ready';
+      lapContainer.innerHTML = '';
+    }
+
+    function recordLap(e) {
+      e.stopPropagation();
+      if (!running && elapsed === 0) return;
+      lapCount++;
+      const { main, ms } = formatTime(elapsed);
+      const item = document.createElement('div');
+      item.className = 'lap-item';
+      item.textContent = `Lap ${lapCount}  —  ${main}${ms}`;
+      lapContainer.appendChild(item);
+
+      // Keep max 5 laps visible
+      const laps = lapContainer.querySelectorAll('.lap-item');
+      if (laps.length > 5) laps[0].remove();
+    }
+
+    function createRipple(e) {
+      const ripple = document.createElement('span');
+      ripple.classList.add('ripple');
+      const size = Math.max(window.innerWidth, window.innerHeight) * 2;
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - size / 2) + 'px';
+      ripple.style.top  = (e.clientY - size / 2) + 'px';
+      document.body.appendChild(ripple);
+      ripple.addEventListener('animationend', () => ripple.remove());
+    }
+
+    body.addEventListener('click', toggleTimer);
+
+    // Keyboard: Space = toggle, R = reset, L = lap
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleTimer({ target: body, clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 });
+      }
+      if (e.code === 'KeyR') resetTimer({ stopPropagation: () => {} });
+      if (e.code === 'KeyL') recordLap({ stopPropagation: () => {} });
+    });
+  </script>
+</body>
+</html>
